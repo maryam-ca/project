@@ -1,3 +1,4 @@
+import type { OrderStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 import { money, ORDER_STATUSES } from "@/lib/utils";
 import { updateOrderAction } from "@/app/actions/admin";
@@ -7,7 +8,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminOrders({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   const { status } = await searchParams;
   const orders = await db.order.findMany({
-    where: status ? { status } : {},
+    where: status && (ORDER_STATUSES as readonly string[]).includes(status) ? { status: status as OrderStatus } : {},
     include: { items: true },
     orderBy: { createdAt: "desc" },
     take: 100,

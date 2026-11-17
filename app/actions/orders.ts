@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { evaluateCoupon } from "@/lib/coupon";
 import { rateLimit } from "@/lib/ratelimit";
-import { effectivePrice, parseList, shippingFor } from "@/lib/utils";
+import { effectivePrice, shippingFor } from "@/lib/utils";
 import type { FormState } from "./auth";
 
 const itemSchema = z.object({
@@ -53,8 +53,8 @@ export async function placeOrderAction(_: FormState, fd: FormData): Promise<Form
   for (const it of items) {
     const p = byId.get(it.productId);
     if (!p) return { error: "Cart mein ek product ab available nahi hai" };
-    if (it.size && !parseList(p.sizes).includes(it.size)) return { error: `${p.name}: invalid size` };
-    if (it.color && !parseList(p.colors).includes(it.color)) return { error: `${p.name}: invalid color` };
+    if (it.size && !p.sizes.includes(it.size)) return { error: `${p.name}: invalid size` };
+    if (it.color && !p.colors.includes(it.color)) return { error: `${p.name}: invalid color` };
     const total = (qtyByProduct.get(p.id) ?? 0) + it.quantity;
     qtyByProduct.set(p.id, total);
     if (total > p.stock) return { error: `${p.name}: sirf ${p.stock} stock mojood hai` };

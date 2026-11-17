@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { effectivePrice, money, parseList } from "@/lib/utils";
+import { effectivePrice, money } from "@/lib/utils";
 import { AddToCart } from "@/components/AddToCart";
 import { ProductCard } from "@/components/ProductCard";
 import { WishButton } from "@/components/WishButton";
@@ -35,7 +35,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const related = await db.product.findMany({ where: { categoryId: p.categoryId, id: { not: p.id }, active: true }, take: 4 });
   const avg = p.reviews.length ? p.reviews.reduce((s, r) => s + r.rating, 0) / p.reviews.length : 0;
   const price = effectivePrice(p);
-  const images = parseList(p.images);
+  const images = p.images.length ? p.images : [p.image];
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -81,8 +81,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           <p className="text-gray-700">{p.description}</p>
           <AddToCart
             product={{ id: p.id, slug: p.slug, name: p.name, image: p.image, price, stock: p.stock }}
-            sizes={parseList(p.sizes)}
-            colors={parseList(p.colors)}
+            sizes={p.sizes}
+            colors={p.colors}
           />
           <ul className="space-y-1 border-t pt-4 text-sm text-gray-600">
             <li>🚚 Cash on Delivery available</li>

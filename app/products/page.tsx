@@ -17,7 +17,7 @@ export default async function Products({ searchParams }: { searchParams: Promise
 
   const where: Prisma.ProductWhereInput = {
     active: true,
-    ...(sp.q ? { OR: [{ name: { contains: sp.q } }, { description: { contains: sp.q } }] } : {}),
+    ...(sp.q ? { OR: [{ name: { contains: sp.q, mode: "insensitive" } }, { description: { contains: sp.q, mode: "insensitive" } }] } : {}),
     ...(sp.category ? { category: { slug: sp.category } } : {}),
     ...(min || max ? { price: { gte: min, lte: max } } : {}),
   };

@@ -5,10 +5,11 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
+import type { OrderStatus } from "@prisma/client";
 import { ORDER_STATUSES, slugify } from "@/lib/utils";
 import type { FormState } from "./auth";
 
-const csv = (s: string) => JSON.stringify(s.split(",").map((x) => x.trim()).filter(Boolean));
+const csv = (s: string) => [...new Set(s.split(",").map((x) => x.trim()).filter(Boolean))];
 
 const productSchema = z.object({
   name: z.string().trim().min(2).max(120),
@@ -35,7 +36,7 @@ export async function saveProductAction(_: FormState, fd: FormData): Promise<For
     discountPrice: d.discountPrice || null,
     stock: d.stock,
     image: d.image,
-    images: JSON.stringify([d.image]),
+    images: [d.image],
     categoryId: d.categoryId,
     sizes: csv(d.sizes),
     colors: csv(d.colors),
@@ -67,8 +68,9 @@ export async function deleteProductAction(fd: FormData) {
 export async function updateOrderAction(fd: FormData) {
   await requireAdmin();
   const id = Number(fd.get("id"));
-  const status = String(fd.get("status"));
-  if (!(ORDER_STATUSES as readonly string[]).includes(status)) return;
+  const raw = String(fd.get("status"));
+  if (!(ORDER_STATUSES as readonly string[]).includes(raw)) return;
+  const status = raw as OrderStatus;
   const order = await db.order.findUnique({ where: { id }, include: { items: true } });
   if (!order) return;
   const restock = status === "CANCELLED" && order.status !== "CANCELLED";

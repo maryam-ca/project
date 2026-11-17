@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { parseList } from "@/lib/utils";
 import { ActionForm, inputCls } from "@/components/ActionForm";
 import { saveProductAction } from "@/app/actions/admin";
 
@@ -36,8 +35,8 @@ export default async function ProductEdit({ params }: { params: Promise<{ id: st
           </select>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <div><label className={label}>Sizes (comma separated)</label><input name="sizes" defaultValue={p ? parseList(p.sizes).join(", ") : ""} placeholder="S, M, L" className={inputCls} /></div>
-          <div><label className={label}>Colors (comma separated)</label><input name="colors" defaultValue={p ? parseList(p.colors).join(", ") : ""} placeholder="Black, White" className={inputCls} /></div>
+          <div><label className={label}>Sizes (comma separated)</label><input name="sizes" defaultValue={p?.sizes.join(", ") ?? ""} placeholder="S, M, L" className={inputCls} /></div>
+          <div><label className={label}>Colors (comma separated)</label><input name="colors" defaultValue={p?.colors.join(", ") ?? ""} placeholder="Black, White" className={inputCls} /></div>
         </div>
         <div className="flex gap-6 text-sm">
           <label className="flex items-center gap-2"><input type="checkbox" name="featured" defaultChecked={p?.featured} /> Featured</label>

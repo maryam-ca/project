@@ -1,14 +1,6 @@
 export const money = (n: number) => `Rs. ${n.toLocaleString("en-PK")}`;
 export const effectivePrice = (p: { price: number; discountPrice: number | null }) =>
   p.discountPrice ?? p.price;
-export const parseList = (s: string): string[] => {
-  try {
-    const v = JSON.parse(s);
-    return Array.isArray(v) ? v : [];
-  } catch {
-    return [];
-  }
-};
 export const slugify = (s: string) =>
   s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 

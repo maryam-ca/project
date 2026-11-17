@@ -2,10 +2,42 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// Dev ke liye SQLite. Production mein provider = "postgresql" aur DATABASE_URL change karein.
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  RETURN_REQUESTED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  REFUNDED
+}
+
+// COD abhi active hai; baqi gateways ke liye tayyar.
+enum PaymentMethod {
+  COD
+  JAZZCASH
+  EASYPAISA
+  CARD
+}
+
+enum CouponType {
+  PERCENT
+  FIXED
 }
 
 model User {
@@ -14,8 +46,9 @@ model User {
   email        String   @unique
   phone        String?
   passwordHash String
-  role         String   @default("CUSTOMER") // CUSTOMER | ADMIN
+  role         Role     @default(CUSTOMER)
   createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
   orders       Order[]
   reviews      Review[]
 }
@@ -32,67 +65,81 @@ model Product {
   id            Int         @id @default(autoincrement())
   name          String
   slug          String      @unique
-  description   String
+  description   String      @db.Text
   price         Int // PKR
   discountPrice Int?
   stock         Int         @default(0)
   image         String
-  images        String      @default("[]") // JSON array of urls
-  sizes         String      @default("[]") // JSON array, e.g. ["S","M","L"]
-  colors        String      @default("[]") // JSON array
+  images        String[]
+  sizes         String[]
+  colors        String[]
   featured      Boolean     @default(false)
   active        Boolean     @default(true)
   categoryId    Int
   category      Category    @relation(fields: [categoryId], references: [id])
   createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
   reviews       Review[]
   orderItems    OrderItem[]
+
+  @@index([categoryId])
+  @@index([active, featured])
+  @@index([active, createdAt])
+  @@index([price])
 }
 
 model Review {
   id        Int      @id @default(autoincrement())
   rating    Int
-  comment   String
+  comment   String   @db.Text
   createdAt DateTime @default(now())
   productId Int
   userId    Int
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([productId, userId])
+  @@index([productId])
 }
 
 model Coupon {
-  id         Int       @id @default(autoincrement())
-  code       String    @unique
-  type       String // PERCENT | FIXED
+  id         Int        @id @default(autoincrement())
+  code       String     @unique
+  type       CouponType
   value      Int
-  minOrder   Int       @default(0)
+  minOrder   Int        @default(0)
   usageLimit Int?
-  used       Int       @default(0)
+  used       Int        @default(0)
   expiresAt  DateTime?
-  active     Boolean   @default(true)
+  active     Boolean    @default(true)
 }
 
 model Order {
-  id            Int         @id @default(autoincrement())
+  id            Int           @id @default(autoincrement())
   userId        Int?
-  user          User?       @relation(fields: [userId], references: [id])
+  user          User?         @relation(fields: [userId], references: [id])
   customerName  String
   email         String
   phone         String
   city          String
-  address       String
+  address       String        @db.Text
   subtotal      Int
-  discount      Int         @default(0)
+  discount      Int           @default(0)
   shipping      Int
   total         Int
   couponCode    String?
-  paymentMethod String      @default("COD")
-  paymentStatus String      @default("PENDING") // PENDING | PAID | REFUNDED
-  status        String      @default("PENDING") // PENDING | CONFIRMED | SHIPPED | DELIVERED | CANCELLED | RETURN_REQUESTED
+  paymentMethod PaymentMethod @default(COD)
+  paymentStatus PaymentStatus @default(PENDING)
+  status        OrderStatus   @default(PENDING)
   trackingId    String?
   courier       String?
-  createdAt     DateTime    @default(now())
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
   items         OrderItem[]
+
+  @@index([userId])
+  @@index([status, createdAt])
+  @@index([phone])
 }
 
 model OrderItem {
@@ -106,4 +153,7 @@ model OrderItem {
   color     String?
   order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product   Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
 }

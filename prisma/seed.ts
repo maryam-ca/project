@@ -6,31 +6,43 @@ const img = (seed: string) => `https://picsum.photos/seed/${seed}/800/800`;
 
 type P = [string, string, number, number | null, number, string[], string[], boolean];
 
-async function main() {
-  await db.orderItem.deleteMany();
-  await db.order.deleteMany();
-  await db.review.deleteMany();
-  await db.product.deleteMany();
-  await db.category.deleteMany();
-  await db.coupon.deleteMany();
-  await db.user.deleteMany();
+const PROD = process.env.NODE_ENV === "production";
+const RESET = process.argv.includes("--reset");
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL ?? "admin@store.pk").toLowerCase();
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? (PROD ? "" : "Admin@12345");
 
-  await db.user.create({
-    data: {
-      name: "Admin",
-      email: "admin@store.pk",
-      passwordHash: await bcrypt.hash("Admin@12345", 10),
-      role: "ADMIN",
-    },
+async function main() {
+  if (ADMIN_PASSWORD.length < 8) {
+    throw new Error("ADMIN_PASSWORD (kam az kam 8 characters) set karein, e.g. ADMIN_PASSWORD='...' npm run db:seed");
+  }
+  const existing = await db.product.count();
+  if (existing > 0 && !RESET) {
+    console.log("Database mein pehle se " + existing + " products hain. Kuch nahi badla. (Sab kuch mitane ke liye: npm run db:seed -- --reset)");
+    return;
+  }
+  if (RESET) {
+    if (PROD && process.env.ALLOW_PROD_RESET !== "yes") throw new Error("Production mein reset roka gaya (ALLOW_PROD_RESET=yes chahiye)");
+    await db.orderItem.deleteMany();
+    await db.order.deleteMany();
+    await db.review.deleteMany();
+    await db.product.deleteMany();
+    await db.category.deleteMany();
+    await db.coupon.deleteMany();
+    await db.user.deleteMany();
+  }
+
+  await db.user.upsert({
+    where: { email: ADMIN_EMAIL },
+    update: { passwordHash: await bcrypt.hash(ADMIN_PASSWORD, 10), role: "ADMIN" },
+    create: { name: "Admin", email: ADMIN_EMAIL, passwordHash: await bcrypt.hash(ADMIN_PASSWORD, 10), role: "ADMIN" },
   });
-  await db.user.create({
-    data: {
-      name: "Demo Customer",
-      email: "customer@store.pk",
-      phone: "03001234567",
-      passwordHash: await bcrypt.hash("Customer@123", 10),
-    },
-  });
+  if (!PROD) {
+    await db.user.upsert({
+      where: { email: "customer@store.pk" },
+      update: {},
+      create: { name: "Demo Customer", email: "customer@store.pk", phone: "03001234567", passwordHash: await bcrypt.hash("Customer@123", 10) },
+    });
+  }
 
   const cats = await Promise.all(
     [
@@ -72,9 +84,9 @@ async function main() {
         discountPrice: disc,
         stock,
         image: img(slug),
-        images: JSON.stringify([img(slug), img(slug + "-2"), img(slug + "-3")]),
-        sizes: JSON.stringify(sizes),
-        colors: JSON.stringify(colors),
+        images: [img(slug), img(slug + "-2"), img(slug + "-3")],
+        sizes,
+        colors,
         featured,
         categoryId: c[cat],
       },
@@ -87,7 +99,7 @@ async function main() {
       { code: "SAVE500", type: "FIXED", value: 500, minOrder: 5000 },
     ],
   });
-  console.log("Seeded.");
+  console.log("Seeded. Admin: " + ADMIN_EMAIL);
 }
 
 main().finally(() => db.$disconnect());
